@@ -401,9 +401,12 @@ func decodeError(buf []byte) error {
 	return Error{Code: uint32(e.Code), Message: e.Message}
 }
 
-// eventDecoder decodes an event from a xdr buffer.
+// eventDecoder decodes an event from a xdr buffer. Some events (JOB_COMPLETED,
+// TUNABLE) carry typed params, so it needs the same TypedParam decoder that
+// RPC replies use; the plain decoder fails on them and Route drops the event.
 func eventDecoder(buf []byte, e interface{}) error {
-	dec := xdr.NewDecoder(bytes.NewReader(buf))
+	ct := map[string]xdr.TypeDecoder{"libvirt.TypedParam": typedParamDecoder{}}
+	dec := xdr.NewDecoderCustomTypes(bytes.NewReader(buf), 0, ct)
 	_, err := dec.Decode(e)
 	return err
 }
